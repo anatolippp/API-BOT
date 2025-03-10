@@ -1,0 +1,16 @@
+ЗАПУСК Docker
+
+docker-compose up -d --build
+
+TG BOT - @Helloborobot
+(/start and /stop)
+
+PLEASE type /start in the telegram bot before use api
+
+
+ЗАПУСК Make
+
+1) Сборка - make build
+2) Запуск - make up
+3) Просмотр логов - make logs
+4) Остановк make down

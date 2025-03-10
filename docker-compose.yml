@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: gobot-app
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: "postgresql+psycopg2://postgres:password@db:5432/postgres"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "db+postgresql+psycopg2://postgres:password@db:5432/postgres"
+      REDIS_URL: "redis://redis:6379/0"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: /bin/bash -c "sleep 30 && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  celery-worker:
+    build: .
+    container_name: gobot-celery-worker
+    volumes:
+      - .:/app
+    environment:
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "db+postgresql+psycopg2://postgres:password@db:5432/postgres"
+      DATABASE_URL: "postgresql+psycopg2://postgres:password@db:5432/postgres"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    command: /bin/bash -c "sleep 25 && celery -A app.celery_app worker --loglevel=info -Q celery --pool=solo"
+    restart: always
+
+  celery-beat:
+    build: .
+    container_name: gobot-celery-beat
+    volumes:
+      - .:/app
+    environment:
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "db+postgresql+psycopg2://postgres:password@db:5432/postgres"
+      DATABASE_URL: "postgresql+psycopg2://postgres:password@db:5432/postgres"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
+    depends_on:
+      db:
+        condition: service_healthy
+      celery-worker:
+        condition: service_started
+      app:
+        condition: service_healthy
+    command: /bin/bash -c "sleep 35 && celery -A app.celery_app beat --loglevel=info"
+    restart: always
+
+  bot:
+    build: .
+    container_name: gobot-bot
+    volumes:
+      - .:/app
+    environment:
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
+      DATABASE_URL: "postgresql+psycopg2://postgres:password@db:5432/postgres"
+      CELERY_BROKER_URL: "redis://redis:6379/0"
+      CELERY_RESULT_BACKEND: "db+postgresql+psycopg2://postgres:password@db:5432/postgres"
+      WEB_API_URL: "http://app:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      app:
+        condition: service_healthy
+    command: python -m app.telegram_bot
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: gobot-redis
+    ports:
+      - "6379:6379"
+
+
+  db:
+    image: postgres:15-alpine
+    container_name: gobot-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.5
+    container_name: gobot-keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/postgres
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: password
+      KC_HOSTNAME: "localhost"
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    command: start-dev
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/realms/master" ]
+      interval: 10s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+
+
+
+
+
+
+
