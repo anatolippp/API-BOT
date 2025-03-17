@@ -1,47 +1,25 @@
-import os
-import logging
+from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
 import asyncio
-import httpx
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
+import os
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from app.handlers.one_time_search import router as onetime_router
+from app.handlers.go_menu import router as go_menu_router
+from app.handlers.project import router as project_router
+from app.handlers.start_stop import router as start_stop_router
 
-API_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-WEB_API_URL = os.getenv("WEB_API_URL", "http://app:8000")
-
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
-
-
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    chat_id = message.chat.id
-    payload = {"chat_id": str(chat_id)}
-
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(f"{WEB_API_URL}/bot/start", json=payload)
-        if resp.status_code == 200:
-            await message.answer("Bot active!")
-        else:
-            await message.answer(f"Start error: {resp.text}")
-
-
-@dp.message(Command("stop"))
-async def cmd_stop(message: types.Message):
-    chat_id = message.chat.id
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(f"{WEB_API_URL}/bot/stop", params={"chat_id": chat_id})
-        if resp.status_code == 200:
-            await message.answer("Bot stopped!")
-        else:
-            await message.answer(f"Stop error: {resp.text}")
-
+API_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
 async def main():
-    await dp.start_polling(bot)
+    bot = Bot(token=API_TOKEN)
+    dp = Dispatcher(storage=MemoryStorage())
 
+    dp.include_router(onetime_router)
+    dp.include_router(go_menu_router)
+    dp.include_router(project_router)
+    dp.include_router(start_stop_router)
+
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())

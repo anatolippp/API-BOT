@@ -1,6 +1,5 @@
 import os
 from celery import Celery
-from celery.schedules import schedule
 
 CELERY_BEAT_SCHEDULER = "sqlalchemy_celery_beat.schedulers:DatabaseScheduler"
 
@@ -22,8 +21,12 @@ celery_app.conf.update(
     beat_scheduler=CELERY_BEAT_SCHEDULER,
     sqlalchemy_scheduler_connection_uri=os.getenv("DATABASE_URL"),
     sqlalchemy_scheduler_table_schema="celery_schema",
+    task_default_queue='celery',
+    task_default_exchange='celery',
+    task_default_routing_key='celery',
 )
 
-celery_app.autodiscover_tasks(["managers.telegram_manager"])
+celery_app.autodiscover_tasks(["managers.telegram_manager", "managers.project_tasks"], force=True)
 
 from managers.telegram_manager import send_message_task
+from managers.project_tasks import scheduled_search_task

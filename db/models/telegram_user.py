@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.sql import func
 from db.database import Base
+from sqlalchemy.orm import relationship
 
 class TelegramUser(Base):
     __tablename__ = "telegram_users"
@@ -10,3 +11,6 @@ class TelegramUser(Base):
     message_text = Column(String(255), default="Hello from DB", nullable=False)
     interval = Column(Integer, default=5, nullable=False)
     last_message_sent = Column(DateTime, server_default=func.now())
+
+    created_projects = relationship("Project", back_populates="creator")
+    project_memberships = relationship("ProjectMember", back_populates="user")

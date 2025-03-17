@@ -18,4 +18,4 @@ class TelegramUserUpdate(BaseModel):
 
 class TelegramUserStart(BaseModel):
     chat_id: str = Field(..., description="ID user")
-    message_text: str = Field("Hello! Have a nice day", description="basic")
+    message_text: str = Field("Hello! How are u?", description="basic")

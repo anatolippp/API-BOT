@@ -16,3 +16,5 @@ pydantic==2.10.6
 pydantic-settings==2.8.1
 jwcrypto==1.5.6
 annotated-types==0.7.0
+openai==0.28.0
+XlsxWriter==3.2.2

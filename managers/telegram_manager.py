@@ -8,7 +8,7 @@ from celery import shared_task
 from aiogram import Bot
 from sqlalchemy.orm import Session
 from db.database import SessionLocal
-from db.models.telegram_user import TelegramUser
+from db.models import TelegramUser
 from config.logging_config import setup_logging
 setup_logging()
 
